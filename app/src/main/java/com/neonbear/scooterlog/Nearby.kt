@@ -56,8 +56,10 @@ fun getLocation(ctx: Context, cb: (Location?) -> Unit) {
         return
     }
     val consumer = androidx.core.util.Consumer<Location?> { loc -> cb(loc ?: last) }
+    // Two overloads differ only by the CancellationSignal type, so give the null an explicit type.
+    val noCancel: android.os.CancellationSignal? = null
     LocationManagerCompat.getCurrentLocation(
-        lm, provider, null, ContextCompat.getMainExecutor(ctx), consumer
+        lm, provider, noCancel, ContextCompat.getMainExecutor(ctx), consumer
     )
 }
 
