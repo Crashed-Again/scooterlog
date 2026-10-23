@@ -55,9 +55,10 @@ fun getLocation(ctx: Context, cb: (Location?) -> Unit) {
         cb(last)
         return
     }
-    LocationManagerCompat.getCurrentLocation(lm, provider, null, ContextCompat.getMainExecutor(ctx)) { loc ->
-        cb(loc ?: last)
-    }
+    val consumer = androidx.core.util.Consumer<Location?> { loc -> cb(loc ?: last) }
+    LocationManagerCompat.getCurrentLocation(
+        lm, provider, null, ContextCompat.getMainExecutor(ctx), consumer
+    )
 }
 
 private fun overpassQuery(lat: Double, lon: Double, radiusM: Int): String {
