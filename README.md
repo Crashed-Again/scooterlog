@@ -1,12 +1,17 @@
 # ScooterLog
 
-Android app for scooter riders: profile, trick tracker with badges, Beginner → Pro progress bar,
-skatepark visit tracker, and JSON export.
+Android app for scooter riders (Material You / Pixel style).
+
+- **Profile**: name, age, Street or Park rider, Beginner -> Pro progress bar, badges, JSON export
+- **Tricks**: 74 tricks with search and filters. Tap one for a description, how-to steps and a looping animation
+- **Parks**: skateparks near you appear automatically (OpenStreetMap data), with Google Maps directions,
+  check-ins and a visit counter for each park
 
 ## Build with GitHub Actions
-1. Create a GitHub repo and push all of these files to it (keep the `.github` folder).
-2. Open the **Actions** tab → **Build APK** (runs on every push, or press *Run workflow*).
-3. When it finishes, download the **ScooterLog-apk** artifact and install `app-debug.apk`.
+1. Push all of these files to a GitHub repo (keep the `.github` folder).
+2. Open the **Actions** tab -> **Build APK** (runs on every push, or press *Run workflow*).
+3. Download the **ScooterLog-apk** artifact and install `app-debug.apk`.
 
-The workflow installs Gradle itself, so no gradle wrapper files are needed.
-Trick "% of riders" numbers are estimates stored in `Tricks.kt` — edit them freely.
+## Editing
+- `Tricks.kt`: add or change tricks, descriptions, steps and the "% of riders" estimates
+- `TrickAnimation.kt`: the animation engine (animations are generated from each trick's `Anim` settings)

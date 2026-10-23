@@ -6,6 +6,9 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -13,15 +16,27 @@ import java.util.Date
 import java.util.Locale
 
 data class Profile(val name: String, val age: Int, val style: String)
-data class Park(val name: String, val visits: List<Long>)
+data class Park(
+    val name: String,
+    val visits: List<Long>,
+    val lat: Double? = null,
+    val lon: Double? = null
+)
 
 class AppStore(context: Context) {
     private val prefs = context.getSharedPreferences("scooterlog", Context.MODE_PRIVATE)
+
+    /** App-wide scope so a nearby-parks search survives switching tabs. */
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     var profile by mutableStateOf<Profile?>(null)
         private set
     val landed = mutableStateMapOf<String, Long>()
     val parks = mutableStateListOf<Park>()
+
+    // Not saved: nearby skateparks are re-fetched each time.
+    var nearby by mutableStateOf<NearbyState>(NearbyState.Idle)
+    var radiusKm by mutableStateOf(25)
 
     init { load() }
 
@@ -54,6 +69,16 @@ class AppStore(context: Context) {
     }
 
     fun deletePark(i: Int) { parks.removeAt(i); save() }
+
+    /** Log a visit at a park, adding it to "My parks" first if needed. */
+    fun checkIn(name: String, lat: Double?, lon: Double?) {
+        var i = parks.indexOfFirst { it.name.equals(name, ignoreCase = true) }
+        if (i < 0) {
+            parks.add(Park(name, emptyList(), lat, lon))
+            i = parks.size - 1
+        }
+        visit(i)
+    }
 
     private fun iso(ms: Long): String =
         SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ", Locale.US).format(Date(ms))
@@ -91,13 +116,16 @@ class AppStore(context: Context) {
         o.put("landedTricks", tricks)
         val ps = JSONArray()
         parks.forEach { p ->
-            ps.put(
-                JSONObject()
-                    .put("name", p.name)
-                    .put("totalVisits", p.visits.size)
-                    .put("visitDates", JSONArray(p.visits.map { iso(it) }))
-                    .put("visitsMillis", JSONArray(p.visits))
-            )
+            val po = JSONObject()
+                .put("name", p.name)
+                .put("totalVisits", p.visits.size)
+                .put("visitDates", JSONArray(p.visits.map { iso(it) }))
+                .put("visitsMillis", JSONArray(p.visits))
+            if (p.lat != null && p.lon != null) {
+                po.put("lat", p.lat)
+                po.put("lon", p.lon)
+            }
+            ps.put(po)
         }
         o.put("skateparks", ps)
         return o
@@ -123,7 +151,9 @@ class AppStore(context: Context) {
             for (i in 0 until ps.length()) {
                 val x = ps.getJSONObject(i)
                 val vm = x.optJSONArray("visitsMillis") ?: JSONArray()
-                parks.add(Park(x.getString("name"), List(vm.length()) { vm.getLong(it) }))
+                val lat = if (x.has("lat")) x.getDouble("lat") else null
+                val lon = if (x.has("lon")) x.getDouble("lon") else null
+                parks.add(Park(x.getString("name"), List(vm.length()) { vm.getLong(it) }, lat, lon))
             }
         } catch (_: Exception) { }
     }
